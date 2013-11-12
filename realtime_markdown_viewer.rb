@@ -13,12 +13,25 @@ get '/' do
 end
 
 get '/emacs' do
-
   request.websocket do |ws|
     ws.onopen { puts "@@ connect from emacs" }
     ws.onmessage do |msg|
-      markdown = RedcarpetCompat.new(msg)
-      html = markdown.to_html
+      markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML,
+                                         :autolink => true,
+                                         :space_after_headers => true,
+                                         :no_intra_emphasis => true,
+                                         :tables => true,
+                                         :fenced_code_blocks => true,
+                                         :strikethrough => true,
+                                         :lax_spacing => true,
+                                         :space_after_headers => true,
+                                         :superscript => true,
+                                         :underline => true,
+                                         :highlight => true,
+                                         :quote => true,
+                                         :footnotes => true)
+
+      html = markdown.render(msg)
       EM.next_tick do
         settings.sockets.each{|s| s.send(html) }
       end
@@ -52,33 +65,31 @@ __END__
 <!doctype html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Realtime Markdown Viewer</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="text/javascript" src="/static/jquery.min.js"></script>
-    <link rel="stylesheet" href="/static/bootstrap.min.css">
+  <meta charset="utf-8">
+  <title>Realtime Markdown Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="text/javascript" src="/static/jquery.min.js"></script>
+  <link rel="stylesheet" href="/static/style.min.css">
 </head>
 <body>
-    <div class="container">
-        <header><h1>Demo</h1></header>
-        <div id="preview"></div>
-    </div>
-    <script type="text/javascript">
-        $(function () {
-            var ws = new WebSocket('ws://localhost:5021/markdown');
-            ws.onopen = function () {
-                console.log('connected');
-            };
-            ws.onclose = function (ev) {
-                console.log('closed');
-            };
-            ws.onmessage = function (ev) {
-                $('#preview').html(ev.data);
-            };
-            ws.onerror = function (ev) {
-                console.log(ev);
-            };
-        });
-    </script>
+  <div class="article">
+  </div>
+  <script type="text/javascript">
+    $(function () {
+      var ws = new WebSocket('ws://localhost:5021/markdown');
+      ws.onopen = function () {
+        console.log('connected');
+      };
+      ws.onclose = function (ev) {
+        console.log('closed');
+      };
+      ws.onmessage = function (ev) {
+        $('div.article').html(ev.data);
+      };
+      ws.onerror = function (ev) {
+        console.log(ev);
+      };
+    });
+  </script>
 </body>
 </html>
